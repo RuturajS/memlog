@@ -82,10 +82,6 @@ func ExecuteInteractive(cmdString string) int {
 	}
 	
 	// Capture AND display output
-	var stdout, stderr bytes.Buffer
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	
 	// Also capture for logging
 	stdoutCapture := &bytes.Buffer{}
 	stderrCapture := &bytes.Buffer{}

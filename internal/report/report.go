@@ -1,7 +1,6 @@
 package report
 
 import (
-	"fmt"
 	"html/template"
 	"os"
 	"sort"
