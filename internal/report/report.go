@@ -3,6 +3,7 @@ package report
 import (
 	"html/template"
 	"os"
+	"path/filepath"
 	"sort"
 	"strings"
 	"time"
@@ -70,8 +71,27 @@ func (g *Generator) Generate(from, to string, outputPath string) error {
 	// Build report data
 	data := g.buildReportData(entries, from, to)
 	
-	// Load template
-	tmpl, err := template.ParseFiles(g.templatePath)
+	// Define custom template functions
+	funcMap := template.FuncMap{
+		"mul": func(a, b int) int {
+			return a * b
+		},
+		"div": func(a, b int) int {
+			if b == 0 {
+				return 0
+			}
+			return a / b
+		},
+		"percentage": func(count, max int) float64 {
+			if max == 0 {
+				return 0
+			}
+			return float64(count) * 100.0 / float64(max)
+		},
+	}
+	
+	// Load template with custom functions
+	tmpl, err := template.New(filepath.Base(g.templatePath)).Funcs(funcMap).ParseFiles(g.templatePath)
 	if err != nil {
 		return err
 	}
