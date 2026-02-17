@@ -12,23 +12,37 @@ SHELL_NAME=$(basename "$SHELL")
 if [ "$SHELL_NAME" = "bash" ]; then
     SHELL_RC="$HOME/.bashrc"
     HOOK_CODE='
-# Memlog automatic logging hook
-export PROMPT_COMMAND="${PROMPT_COMMAND:+$PROMPT_COMMAND$'"'"'\n'"'"'}history -a; memlog_auto_log"
+# Memlog automatic logging hook (using DEBUG trap)
+shopt -s extdebug
+memlog_last_cmd=""
 
-memlog_auto_log() {
-    local last_cmd=$(history 1 | sed "s/^[ ]*[0-9]*[ ]*//")
-    if [ -n "$last_cmd" ] && [ "$last_cmd" != "memlog_auto_log" ]; then
-        (memlog exec "$last_cmd" &>/dev/null &)
+memlog_preexec() {
+    local cmd="$BASH_COMMAND"
+    
+    # Skip memlog commands, internal bash commands, and duplicates
+    if [[ "$cmd" != memlog* ]] && [[ "$cmd" != "memlog_"* ]] && \
+       [[ "$cmd" != *"PROMPT_COMMAND"* ]] && [[ "$cmd" != "trap"* ]]; then
+        if [ "$cmd" != "$memlog_last_cmd" ]; then
+            memlog_last_cmd="$cmd"
+            # Run in background to avoid blocking
+            (nohup memlog exec "$cmd" &>/dev/null &)
+        fi
     fi
 }
+
+trap memlog_preexec DEBUG
 '
 elif [ "$SHELL_NAME" = "zsh" ]; then
     SHELL_RC="$HOME/.zshrc"
     HOOK_CODE='
-# Memlog automatic logging hook
+# Memlog automatic logging hook (using preexec)
 preexec() {
-    if [ -n "$1" ] && [[ "$1" != memlog* ]]; then
-        (memlog exec "$1" &>/dev/null &)
+    local cmd="$1"
+    
+    # Skip memlog commands
+    if [[ "$cmd" != memlog* ]]; then
+        # Run in background to avoid blocking
+        (nohup memlog exec "$cmd" &>/dev/null &)
     fi
 }
 '
@@ -39,7 +53,7 @@ else
 fi
 
 # Check if already installed
-if grep -q "memlog_auto_log\|Memlog automatic logging" "$SHELL_RC" 2>/dev/null; then
+if grep -q "memlog_preexec\|Memlog automatic logging" "$SHELL_RC" 2>/dev/null; then
     echo "⚠️  Memlog auto-logging is already set up in $SHELL_RC"
     echo ""
     echo "To reinstall, remove the existing hook first:"
@@ -57,11 +71,17 @@ echo "📝 How it works:"
 echo "  - Every command you run will be automatically logged"
 echo "  - No need to type 'memlog exec' anymore"
 echo "  - Logging happens in the background (no slowdown)"
+echo "  - Uses DEBUG trap (bash) or preexec (zsh) for reliable capture"
 echo ""
 echo "🔄 Restart your shell or run:"
 echo "  source $SHELL_RC"
 echo ""
 echo "🧪 Test it:"
+echo "  ls -la"
 echo "  echo 'Hello Memlog!'"
-echo "  memlog logs --last 1"
+echo "  pwd"
+echo "  memlog logs --last 5"
+echo ""
+echo "💡 Tip: Create an alias for quick manual logging:"
+echo "  echo 'alias m=\"memlog exec\"' >> $SHELL_RC"
 echo ""
