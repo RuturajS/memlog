@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Memlog Report - {{.FromDate}} to {{.ToDate}}</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+        
+        header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 40px;
+            text-align: center;
+        }
+        
+        header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+        
+        header p {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            padding: 40px;
+            background: #f8f9fa;
+        }
+        
+        .stat-card {
+            background: white;
+            padding: 25px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            transition: transform 0.2s;
+        }
+        
+        .stat-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+        }
+        
+        .stat-card h3 {
+            color: #667eea;
+            font-size: 0.9em;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 10px;
+        }
+        
+        .stat-card .value {
+            font-size: 2.5em;
+            font-weight: bold;
+            color: #333;
+        }
+        
+        .section {
+            padding: 40px;
+        }
+        
+        .section h2 {
+            color: #333;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 3px solid #667eea;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        
+        th {
+            background: #667eea;
+            color: white;
+            padding: 12px;
+            text-align: left;
+            font-weight: 600;
+        }
+        
+        td {
+            padding: 12px;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        
+        tr:hover {
+            background: #f8f9fa;
+        }
+        
+        .chart {
+            margin-top: 20px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+        
+        .bar-chart {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        
+        .bar-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .bar-label {
+            width: 80px;
+            font-weight: 500;
+            color: #666;
+        }
+        
+        .bar-container {
+            flex: 1;
+            background: #e0e0e0;
+            border-radius: 4px;
+            height: 30px;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .bar-fill {
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+            height: 100%;
+            border-radius: 4px;
+            transition: width 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            padding-right: 10px;
+            color: white;
+            font-weight: bold;
+            font-size: 0.9em;
+        }
+        
+        footer {
+            background: #333;
+            color: white;
+            text-align: center;
+            padding: 20px;
+            font-size: 0.9em;
+        }
+        
+        .success-rate {
+            color: #28a745;
+        }
+        
+        .failure-rate {
+            color: #dc3545;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>📊 Memlog Report</h1>
+            <p>{{.FromDate}} to {{.ToDate}}</p>
+        </header>
+        
+        <div class="stats-grid">
+            <div class="stat-card">
+                <h3>Total Commands</h3>
+                <div class="value">{{.TotalCommands}}</div>
+            </div>
+            <div class="stat-card">
+                <h3>Failed Commands</h3>
+                <div class="value failure-rate">{{.FailedCommands}}</div>
+            </div>
+            <div class="stat-card">
+                <h3>Success Rate</h3>
+                <div class="value success-rate">{{printf "%.1f" .SuccessRate}}%</div>
+            </div>
+        </div>
+        
+        <div class="section">
+            <h2>🔥 Most Used Commands</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Command</th>
+                        <th>Count</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {{range .MostUsedCommands}}
+                    <tr>
+                        <td><code>{{.Command}}</code></td>
+                        <td>{{.Count}}</td>
+                    </tr>
+                    {{end}}
+                </tbody>
+            </table>
+        </div>
+        
+        <div class="section">
+            <h2>⏰ Activity by Hour</h2>
+            <div class="chart">
+                <div class="bar-chart">
+                    {{$max := 0}}
+                    {{range .ActivityByHour}}
+                        {{if gt .Count $max}}
+                            {{$max = .Count}}
+                        {{end}}
+                    {{end}}
+                    
+                    {{range .ActivityByHour}}
+                    {{if gt .Count 0}}
+                    <div class="bar-item">
+                        <div class="bar-label">{{printf "%02d:00" .Hour}}</div>
+                        <div class="bar-container">
+                            <div class="bar-fill" style="width: {{if gt $max 0}}{{mul (div (mul .Count 100) $max) 1}}{{else}}0{{end}}%">
+                                {{.Count}}
+                            </div>
+                        </div>
+                    </div>
+                    {{end}}
+                    {{end}}
+                </div>
+            </div>
+        </div>
+        
+        <div class="section">
+            <h2>📁 Top Directories</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Directory</th>
+                        <th>Commands</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {{range .TopDirectories}}
+                    <tr>
+                        <td><code>{{.Directory}}</code></td>
+                        <td>{{.Count}}</td>
+                    </tr>
+                    {{end}}
+                </tbody>
+            </table>
+        </div>
+        
+        <div class="section">
+            <h2>🐌 Longest Running Commands</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Command</th>
+                        <th>Duration (ms)</th>
+                        <th>Exit Code</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {{range .LongestCommands}}
+                    <tr>
+                        <td><code>{{.Command}}</code></td>
+                        <td>{{.DurationMs}}</td>
+                        <td>{{.ExitCode}}</td>
+                    </tr>
+                    {{end}}
+                </tbody>
+            </table>
+        </div>
+        
+        <footer>
+            Generated by Memlog on {{.GeneratedAt}}
+        </footer>
+    </div>
+</body>
+</html>
